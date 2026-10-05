@@ -1,13 +1,52 @@
-<div align="center">
-  <h1>🤖 ANITS AI Assistant - Enterprise Documentation</h1>
-  <p><strong>A Highly Scalable, Omnichannel Generative AI Platform</strong></p>
-  
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![React 19](https://img.shields.io/badge/Frontend-React_19-61dafb.svg)](https://react.dev/)
-  [![Python 3.11+](https://img.shields.io/badge/Backend-Python_3.11+-blue.svg)](https://www.python.org/)
-  [![MongoDB Atlas](https://img.shields.io/badge/Database-MongoDB_Vector_Search-47A248.svg)](https://www.mongodb.com/)
-  [![Gemini AI](https://img.shields.io/badge/AI-Google_Gemini_1.5-FFCA28.svg)](https://deepmind.google/technologies/gemini/)
-</div>
+# StudentHub
+AI-Powered Campus & Career Platform
+
+[Live Demo](#36-demo-instructions) | [GitHub](#) | [Architecture](#12-system-architecture) | [Screenshots](#35-screenshots-section)
+
+## What It Solves
+Educational institutions suffer from fragmented data silos, making it difficult for students to find current circulars, policies, and schedules. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. StudentHub centralizes all campus knowledge into a unified Vector Database, providing zero-latency conversational access and dynamic data management across Web, Telegram, and WhatsApp.
+
+## Key Features
+- **Omnichannel RAG AI**: Grounded conversational responses across Web, Telegram, and WhatsApp.
+- **Multimodal Vision Pipeline**: Upload photos of timetables or handwritten notices for instant AI interpretation.
+- **Hinglish & Multilingual NLP**: Natively handles regional languages and romanized scripts.
+- **Dynamic Schema Manager**: Automatically adapts database collections based on uploaded CSV headers.
+- **Zero-Trust Security**: JWT-secured portals and cryptographic Telegram phone-number verification.
+- **Faculty Broadcast Portal**: Secure rich-text Google SMTP integrations for asynchronous email broadcasting.
+
+## Tech Stack
+- **Frontend**: React 19, Vite, Tailwind CSS
+- **Backend**: Python 3.11, Flask
+- **Database**: MongoDB Atlas (Vector Search & BSON Document Store)
+- **AI**: Google Gemini 1.5 Flash, PyMuPDF, text-embedding-004
+- **Realtime**: Twilio (WhatsApp), python-telegram-bot
+- **Testing**: PyTest, Jest, React Testing Library
+- **Deployment**: Vercel (Frontend), Render/AWS (Backend)
+
+## Architecture
+```mermaid
+graph TD
+    Client_Web[React Web] -->|REST| Router[Flask Gateway]
+    Client_Bot[Telegram/WhatsApp] -->|Webhooks| Router
+    Router -->|Query| VectorDB[(MongoDB Vector)]
+    VectorDB -->|Context| Gemini[Gemini 1.5 LLM]
+    Gemini -->|Answer| Router
+```
+
+## Screenshots
+*(Attach 4–6 high-resolution PNGs of the Glassmorphism UI, Chatbot widget, and Telegram interface here).*
+
+## Run Locally
+```bash
+# Terminal 1: Backend
+cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python app.py
+
+# Terminal 2: Frontend
+cd frontend && npm install && npm run dev
+```
+
+## My Role
+I served as the Lead Architect and Full-Stack Developer, independently building the entire system from the ground up. I designed the MongoDB dynamic schema, engineered the RAG AI pipeline using Gemini 1.5, built the omnichannel webhooks for Telegram/Twilio, and created the responsive React 19 frontend dashboards.
 
 ---
 
