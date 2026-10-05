@@ -50,7 +50,83 @@ I served as the Lead Architect and Full-Stack Developer, independently building 
 
 ---
 
-## 1. README.md Overview
+## 📑 Comprehensive Documentation Index
+
+To ensure absolute transparency and strict maintainability, the complete system documentation is mapped out below. Click any section to jump directly to the technical deep dive.
+
+<details open>
+<summary><b>1️⃣ Product & Vision</b></summary>
+
+- [1. Enterprise Documentation Overview](#1-enterprise-documentation-overview)
+- [2. Project Overview](#2-project-overview)
+- [3. Problem Statement](#3-problem-statement)
+- [4. Objectives](#4-objectives)
+- [5. Features](#5-features)
+- [6. Functional Requirements](#6-functional-requirements)
+- [7. Non-Functional Requirements](#7-non-functional-requirements)
+- [8. User Stories](#8-user-stories)
+- [9. Use Cases](#9-use-cases)
+
+</details>
+
+<details open>
+<summary><b>2️⃣ System & Database Architecture</b></summary>
+
+- [10. High-Level Design](#10-high-level-design)
+- [11. Low-Level Design](#11-low-level-design)
+- [12. System Architecture](#12-system-architecture)
+- [13. Data Flow](#13-data-flow)
+- [14. Database Design](#14-database-design)
+- [15. API Documentation](#15-api-documentation)
+- [16. Authentication Flow](#16-authentication-flow)
+
+</details>
+
+<details open>
+<summary><b>3️⃣ Machine Learning & Technology</b></summary>
+
+- [17. Machine Learning Pipeline](#17-machine-learning-pipeline)
+- [18. Dataset Documentation](#18-dataset-documentation)
+- [19. Folder Structure](#19-folder-structure)
+- [20. Technology Stack with justification](#20-technology-stack-with-justification)
+
+</details>
+
+<details open>
+<summary><b>4️⃣ Deployment, Testing & Ops</b></summary>
+
+- [21. Installation Guide](#21-installation-guide)
+- [22. Configuration Guide](#22-configuration-guide)
+- [23. Environment Variables](#23-environment-variables)
+- [24. Running Locally](#24-running-locally)
+- [25. Docker Setup](#25-docker-setup)
+- [26. Deployment Guide](#26-deployment-guide)
+- [27. Testing Strategy](#27-testing-strategy)
+- [28. Performance Metrics](#28-performance-metrics)
+- [29. Security Considerations](#29-security-considerations)
+- [30. Scalability Considerations](#30-scalability-considerations)
+- [31. Limitations](#31-limitations)
+- [32. Future Enhancements](#32-future-enhancements)
+- [33. Troubleshooting Guide](#33-troubleshooting-guide)
+- [34. FAQ](#34-faq)
+
+</details>
+
+<details open>
+<summary><b>5️⃣ Community & Showcase</b></summary>
+
+- [35. Screenshots Section](#35-screenshots-section)
+- [36. Demo Instructions](#36-demo-instructions)
+- [37. Contributing Guide](#37-contributing-guide)
+- [38. License Information](#38-license-information)
+- [39. References](#39-references)
+- [40. Credits](#40-credits)
+
+</details>
+
+---
+
+## 1. Enterprise Documentation Overview
 Welcome to the official, enterprise-grade repository for the **ANITS AI Assistant**. This document serves as the absolute source of truth for the system's architecture, machine learning pipeline, deployment procedures, and API specifications. It has been authored to strict Tier-1 engineering standards to ensure comprehensive maintainability and scalability.
 
 ## 2. Project Overview
