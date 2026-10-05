@@ -1,10 +1,10 @@
-# StudentHub
-AI-Powered Campus & Career Platform
+# ANITS AI Assistant
+Enterprise Campus Intelligence Platform
 
 [Live Demo](#36-demo-instructions) | [GitHub](#) | [Architecture](#12-system-architecture) | [Screenshots](#35-screenshots-section)
 
 ## What It Solves
-Educational institutions suffer from fragmented data silos, making it difficult for students to find current circulars, policies, and schedules. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. StudentHub centralizes all campus knowledge into a unified Vector Database, providing zero-latency conversational access and dynamic data management across Web, Telegram, and WhatsApp.
+Educational institutions suffer from fragmented data silos, making it difficult for students to find current circulars, policies, and schedules. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. The ANITS AI Assistant centralizes all campus knowledge into a unified Vector Database, providing zero-latency conversational access and dynamic data management across Web, Telegram, and WhatsApp.
 
 ## Key Features
 - **Omnichannel RAG AI**: Grounded conversational responses across Web, Telegram, and WhatsApp.
