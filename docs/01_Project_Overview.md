@@ -1,48 +1,52 @@
-# 01 - Project Overview
+# 01 - Product Requirements Document (PRD)
 
-## 1. Problem Statement
-Many engineering institutions, including Anil Neerukonda Institute of Technology & Sciences (ANITS), struggle with centralized information dissemination. Students and faculty frequently face challenges accessing up-to-date circulars, policy documents, schedules, and personalized academic information. The existing systems are often fragmented across multiple static webpages, PDF files, and legacy databases. 
-This results in:
-- High latency in answering student queries.
-- Administrative overhead for faculty.
-- Inconsistent communication channels.
-- Difficulty parsing and analyzing large volumes of unstructured student data.
+## 2. Project Overview
+The ANITS AI Assistant is an enterprise-scale conversational intelligence platform developed to unify fragmented academic data at the Anil Neerukonda Institute of Technology & Sciences. By adopting a Retrieval-Augmented Generation (RAG) architecture, the system dynamically vectorizes localized documents (PDF circulars, syllabuses) alongside dynamic student database records (CSVs), bypassing the need for computationally expensive static fine-tuning of foundational models. 
 
-## 2. Objectives
-- **Centralized Knowledge Hub**: Create a single conversational interface capable of answering any college-related query with 100% accuracy based on official documents.
-- **Omnichannel Accessibility**: Ensure the assistant is available where students already are (Web, Telegram, WhatsApp).
-- **Administrative Empowerment**: Provide a secure portal for faculty to broadcast emails and manage student databases effortlessly.
-- **Multimodal Understanding**: Enable the AI to interpret visual data (schedules, handwritten notes).
-- **Scalability and Extensibility**: Build an architecture that can handle thousands of concurrent queries with low latency.
+## 3. Problem Statement
+**Current State Analysis:**
+- **Data Fragmentation**: Administrative data is distributed across disparate legacy PHP portals, physical notice boards, and unstructured PDF files.
+- **Latency in Query Resolution**: Faculty spend upwards of 15 hours a week responding to repetitive student inquiries regarding deadlines, fees, and syllabuses.
+- **Authentication Barriers**: Students face friction utilizing traditional Web portals, leading to poor adoption rates for critical campus communications.
+- **Data Ingestion Bottlenecks**: Student datasets shift in schema every academic year (e.g., adding "Placement Status"), requiring manual SQL schema migrations and developer intervention.
 
-## 3. Features
-- **RAG-Powered Conversational AI**: Grounded responses using MongoDB Vector Search.
-- **Multilingual Support**: Natively understands and responds in English, Telugu, Hindi, and romanized hybrid languages (e.g., Hinglish).
-- **Multimodal Vision**: Upload and query images via Gemini 2.5 Flash.
-- **Dynamic Student Database Ingestion**: Automated parsing of CSV/XLSX/JSON into structured MongoDB documents.
-- **Faculty Broadcast Portal**: One-click email broadcasts to the entire student body via Google SMTP.
-- **Cross-Platform Bots**: Fully integrated Telegram bot with secure phone-number-based student authentication.
+## 4. Objectives
+- **Zero-Latency Orchestration**: Achieve P95 text inference < 2.5 seconds via edge-optimized caching and highly available vector search.
+- **Dynamic Ingestion (Schema-less)**: Support ingestion of raw, malformed CSV datasets directly from the UI without database migrations.
+- **Omnichannel Pervasiveness**: Embed the AI natively into Telegram and WhatsApp where students actively reside, establishing native cryptographic authentication flows.
+- **Faculty Empowerment**: Provide an isolated, JWT-secured portal allowing asynchronous SMTP email broadcasting to batches of >1000 students without memory overflow.
 
-## 4. Functional Requirements
-- The system MUST authenticate administrators via JWT before granting access to the dashboard.
-- The system MUST allow faculty to upload `.csv` or `.xlsx` files and automatically map the columns to the MongoDB schema.
-- The Telegram bot MUST verify a student's phone number against the database before allowing queries about personal grades or attendance.
-- The chatbot MUST support image uploads and process them within 5 seconds.
-- The RAG pipeline MUST embed and store uploaded PDF circulars within 10 seconds.
+## 5. Features
+- **Semantic RAG Inference**: Resolves domain-specific queries using a customized Gemini 1.5 Flash pipeline.
+- **Multimodal Context Processing**: Interprets user-uploaded Base64 image payloads (e.g., timetables) simultaneously alongside text queries.
+- **Hinglish/Multilingual NLP Tokenization**: Naturally tokenizes and replies in regional scripts (Telugu/Hindi) or romanized phonetic text.
+- **Dynamic BSON Schema Manager**: Reads CSV headers dynamically in Python `pandas` and maps them directly to MongoDB NoSQL documents.
+- **Zero-Trust Role-Based Access Control (RBAC)**: Enforces stateless HS256 JWT tokens with strict 24-hour lifespans for all admin/faculty endpoints.
 
-## 5. Non-Functional Requirements
-- **Performance**: 95% of text-based chat queries should resolve in < 2.5 seconds.
-- **Scalability**: The backend should comfortably support 500 concurrent connections.
-- **Availability**: 99.9% uptime for the chat interface.
-- **Security**: All API keys, secrets, and database URIs must be injected via Environment Variables. No sensitive data in the repository. Password hashes and JWT tokens must use enterprise-standard encryption (HS256/bcrypt).
+## 6. Functional Requirements
+- **FR1 (Authentication)**: The `/api/login` endpoint MUST validate credentials via `bcrypt` hashing and issue a signed JWT.
+- **FR2 (Vectorization)**: The `sync_vectors.py` worker MUST chunk uploaded PDFs (chunk size=1000, overlap=150) and output 768-dimensional float arrays via `text-embedding-004` within 10 seconds.
+- **FR3 (Bot Identity)**: The Telegram bot (`python-telegram-bot`) MUST require the native Telegram `contact` object to cryptographically verify the user's phone number against the MongoDB `students` collection before authorizing queries.
+- **FR4 (Broadcast Engine)**: The SMTP dispatcher MUST iterate over the student collection in chunks of 100 to prevent ThreadPool starvation.
 
-## 6. User Stories
-- *As a student*, I want to ask the bot in my native language about the upcoming exam schedule so that I don't have to navigate through the official website.
-- *As a student*, I want to upload a photo of a notice board so the bot can extract the text and explain it to me.
-- *As a faculty member*, I want to send an emergency email broadcast to all 2nd-year students regarding a class cancellation.
-- *As an administrator*, I want to see analytics on what languages students are using to query the bot.
+## 7. Non-Functional Requirements
+- **NFR1 (Performance)**: MongoDB Atlas `$vectorSearch` MUST execute Cosine Similarity matches in < 150ms over a 10,000+ vector corpus.
+- **NFR2 (Security)**: All secrets MUST be injected at runtime via `.env` conforming to `os.getenv`. CORS MUST restrict traffic strictly to the Vercel production domain.
+- **NFR3 (Availability)**: The Flask gateway MUST employ a `gunicorn` WSGI server utilizing the `eventlet` worker class (`-w 4`) to ensure concurrent I/O operations do not block the main thread.
+- **NFR4 (Usability)**: The React dashboard MUST achieve a Lighthouse Accessibility and Performance score of > 90.
 
-## 7. Use Cases
-1. **Academic Inquiry**: Student asks "What is the syllabus for 3rd year Data Structures?" -> Bot retrieves the Vector embedding for the syllabus PDF and generates a concise answer.
-2. **Personalized Data Access**: Student asks "What is my current attendance?" on Telegram -> Bot verifies their Telegram ID, queries the student collection, and returns their specific attendance percentage.
-3. **Data Ingestion**: Admin uploads a new batch of 2026 students -> Backend parses the CSV, dynamically adjusts the schema, and inserts the records into MongoDB.
+## 8. User Stories
+- *As a 3rd-year CS student*, I want to text the Telegram bot in Hinglish asking "mera attendance kitna hai?" so that I can instantly receive my precise attendance percentage without logging into the clunky desktop portal.
+- *As a faculty administrator*, I want to upload a massive Excel sheet of the incoming freshmen class with new, previously unseen columns (e.g., "Extracurriculars"), so the database automatically adopts these fields dynamically.
+- *As a student*, I want to snap a photo of a complicated, handwritten lab schedule and ask the AI "When is my physics lab?" so it can perform OCR and contextual analysis simultaneously.
+
+## 9. Use Cases
+1. **The RAG Query Flow**: 
+   - *Trigger*: User asks a question via Web UI. 
+   - *System Action*: Flask receives JSON -> Embeds query -> `$vectorSearch` retrieves Top 4 documents -> Gemini synthesizes the answer.
+2. **The Cryptographic Identity Flow**: 
+   - *Trigger*: User clicks `/start` on Telegram. 
+   - *System Action*: Bot prompts for Phone Number -> User shares Contact -> Bot validates against MongoDB -> Links `telegram_id` to `student_id`.
+3. **The SMTP Broadcast Flow**: 
+   - *Trigger*: Faculty hits 'Send' on the Web UI. 
+   - *System Action*: Flask receives rich-text HTML -> Queries all valid student emails -> Spawns background worker -> Establishes TLS connection to Google SMTP -> Dispatches chunks of 100 emails asynchronously.

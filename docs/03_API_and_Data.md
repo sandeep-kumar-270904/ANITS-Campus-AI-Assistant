@@ -1,137 +1,114 @@
-# 03 - API and Database Design
+# 03 - API Contracts & Authentication Topology
 
-## 1. REST API Documentation
+## 15. API Documentation
 
-The backend exposes a comprehensive RESTful API. Below are the core endpoints.
+The RESTful API adheres to strict JSON payload contracts. All protected endpoints validate the `Authorization: Bearer <token>` header natively in Flask middleware.
 
-### Authentication Endpoints
-- `POST /api/login`
-  - **Payload**: `{ "email": "admin@anits.edu.in", "password": "..." }`
-  - **Response**: `{ "token": "jwt_string..." }`
-  - **Purpose**: Authenticates administrators.
+### 15.1. Authentication
+`POST /api/login`
+Authenticates high-level administrative users.
+- **Headers**: `Content-Type: application/json`
+- **Request Body**:
+```json
+{
+  "email": "admin@anits.edu.in",
+  "password": "secure_bcrypt_hashed_string"
+}
+```
+- **Response (200 OK)**:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+- **Response (401 Unauthorized)**:
+```json
+{
+  "error": "Invalid credentials"
+}
+```
 
-- `POST /api/faculty/login`
-  - **Payload**: `{ "email": "faculty@anits.edu.in", "password": "..." }`
-  - **Response**: `{ "token": "jwt_string..." }`
-  - **Purpose**: Authenticates faculty members.
+### 15.2. AI Inference Engine
+`POST /chat`
+The core gateway for LLM evaluation. Accepts standard text and massive Base64 payloads simultaneously.
+- **Headers**: `Content-Type: application/json`
+- **Request Body**: 
+```json
+{
+  "message": "Explain the discrepancy in my attendance.",
+  "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCE...",
+  "session_id": "web_a1b2c3d4e5"
+}
+```
+- **Response (200 OK)**:
+```json
+{
+  "reply": "According to the uploaded timetable and the policy manual, your attendance falls below the 75% threshold."
+}
+```
+*(Rate limiting applies: 55 requests / minute per IP).*
 
-### Chat & Inference Endpoints
-- `POST /chat`
-  - **Payload**: 
-    ```json
-    {
-      "message": "Explain this image",
-      "session_id": "web_12345",
-      "image": "data:image/jpeg;base64,...",
-      "audio": null
-    }
-    ```
-  - **Response**: `{ "reply": "This is a class schedule..." }`
-  - **Purpose**: The core inference engine. Handles Text, Audio, and Image inputs.
+### 15.3. Dynamic Schema Retrieval
+`GET /api/admin/student_fields`
+Reads the first 50 BSON documents in the `students` collection, aggregates all unique top-level keys, and returns them to populate the React frontend's table headers dynamically.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response (200 OK)**:
+```json
+[
+  "Roll Number", 
+  "Name", 
+  "Branch", 
+  "Phone", 
+  "CGPA",
+  "Placement Status" 
+]
+```
 
-### Admin Endpoints (Require JWT Header: `Authorization: Bearer <token>`)
-- `GET /api/admin/student_fields`
-  - **Response**: `["Roll Number", "Name", "Branch", "CGPA"]`
-  - **Purpose**: Dynamically returns all keys present in the `students` collection.
-- `POST /api/upload_student_data`
-  - **Payload**: Multipart Form Data (CSV/XLSX file).
-  - **Purpose**: Parses and upserts student records.
+### 15.4. Batch Ingestion
+`POST /api/upload_student_data`
+- **Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+- **Payload**: `file` (Buffer of .csv or .xlsx)
+- **Response (200 OK)**: `{"message": "Successfully upserted 1250 records without schema violations."}`
 
-### Faculty Endpoints (Require Faculty JWT)
-- `POST /api/faculty/email-broadcast`
-  - **Payload**: `{ "subject": "Exam Postponed", "htmlContent": "<h1>Notice</h1>..." }`
-  - **Purpose**: Uses `smtplib` to iterate through the student collection and send personalized emails.
+## 16. Authentication Flow
 
-## 2. Authentication Flow
+Security is heavily enforced. State is never maintained on the server (stateless architecture) to ensure seamless horizontal scaling.
+
+### Web JWT Flow (Admin/Faculty)
+1. The client submits plain-text credentials over HTTPS.
+2. The Flask gateway compares the hashed password against the environment variable utilizing `werkzeug.security.check_password_hash`.
+3. If valid, the gateway issues a JSON Web Token (JWT) signed with the highly secure `HS256` symmetric algorithm, utilizing a 32-byte secret injected via `os.getenv('JWT_SECRET')`.
+4. The token is injected with an `exp` claim of 24 hours.
+5. All subsequent requests are intercepted by the `@token_required` wrapper, which halts execution if a `jwt.ExpiredSignatureError` or `jwt.InvalidTokenError` is thrown.
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant API
-    participant MongoDB
+    participant WebClient
+    participant FlaskInterceptor
+    participant CoreLogic
     
-    Client->>API: POST /api/login (email, password)
-    API->>API: Validate against ALLOWED_EMAILS
-    alt Success
-        API->>Client: 200 OK + JWT Token (Signed with HS256)
-    else Failure
-        API->>Client: 401 Unauthorized
+    WebClient->>FlaskInterceptor: POST /api/login (Credentials)
+    FlaskInterceptor->>FlaskInterceptor: Validate Hash (bcrypt)
+    alt Valid Credentials
+        FlaskInterceptor->>WebClient: 200 OK + JWT (24h Expiry)
+    else Invalid Credentials
+        FlaskInterceptor->>WebClient: 401 Unauthorized
     end
     
-    Client->>API: POST /api/upload_circular (Header: Bearer JWT)
-    API->>API: Decode & Validate JWT
-    alt Valid
-        API->>MongoDB: Perform Admin Action
-        API->>Client: 200 Success
-    else Expired/Invalid
-        API->>Client: 401 Unauthorized
+    WebClient->>FlaskInterceptor: GET /protected_data (Header: Bearer JWT)
+    FlaskInterceptor->>FlaskInterceptor: Decode JWT & Validate Expiry
+    alt Valid Token
+        FlaskInterceptor->>CoreLogic: Proceed to Function
+        CoreLogic->>WebClient: 200 OK (Data Served)
+    else Expired Token
+        FlaskInterceptor->>WebClient: 401 Unauthorized (Token Expired)
     end
 ```
 
-## 3. Database Schema Design (MongoDB)
-
-Since MongoDB is schema-less, these represent the *logical* structures enforced by the application layer.
-
-### Collection: `chat_logs`
-Stores conversation history for context retrieval and analytics.
-```json
-{
-  "_id": "ObjectId",
-  "session_id": "String (web_xxx or telegram_xxx)",
-  "user_message": "String",
-  "bot_reply": "String",
-  "detected_language": "String (e.g., 'en', 'te', 'hi')",
-  "timestamp": "ISODate"
-}
-```
-
-### Collection: `students`
-A highly dynamic collection. Columns can vary based on admin uploads.
-```json
-{
-  "_id": "ObjectId",
-  "Roll Number": "String (Primary Identifier)",
-  "Name": "String",
-  "Email": "String",
-  "Phone": "String",
-  "CGPA": "Number",
-  "Attendance": "String"
-  // ... Any other dynamically mapped fields
-}
-```
-
-### Collection: `knowledge_base`
-Stores the embedded vectors for the RAG pipeline.
-```json
-{
-  "_id": "ObjectId",
-  "text": "String (The raw chunk of text)",
-  "embedding": "[Array of 768 Float Numbers]",
-  "source": "String (Filename)",
-  "type": "String (pdf/json/website)"
-}
-```
-
-### ER Diagram (Logical)
-
-```mermaid
-erDiagram
-    STUDENT ||--o{ CHAT_LOG : initiates
-    STUDENT {
-        string RollNumber PK
-        string Name
-        string Email
-        string Phone
-    }
-    CHAT_LOG {
-        string session_id PK
-        string user_message
-        string bot_reply
-        date timestamp
-    }
-    KNOWLEDGE_BASE {
-        string source PK
-        string text
-        float[] embedding
-    }
-```
+### Telegram Cryptographic Identity Flow (Students)
+Unlike traditional portals requiring passwords (which students often forget), the Telegram bot relies on hardware/account-level cryptographic guarantees provided by the Telegram API.
+1. The student clicks `/start`.
+2. The bot utilizes a `ReplyKeyboardMarkup` prompting the user to share their native `Contact` object. (Users cannot type a fake number; they MUST share their cryptographically signed account number).
+3. The Flask webhook receives the `contact.phone_number`.
+4. Flask normalizes the string (stripping country codes) and queries the MongoDB `students` collection.
+5. If a match is found, the user's `telegram_id` is permanently linked to their `Roll Number` in the database, allowing them to query sensitive PII (like CGPA) securely thereafter.
