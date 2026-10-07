@@ -4,7 +4,7 @@ Enterprise Campus Intelligence Platform
 [Live Demo](#36-demo-instructions) | [GitHub](#) | [Architecture](#12-system-architecture) | [Screenshots](#35-screenshots-section)
 
 ## What It Solves
-Educational institutions suffer from fragmented data silos, making it difficult for students to find current circulars, policies, and schedules. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. The ANITS AI Assistant centralizes all campus knowledge into a unified Vector Database, providing zero-latency conversational access and dynamic data management across Web, Telegram, and WhatsApp.
+Educational institutions suffer from fragmented data silos, making it difficult for students to find current circulars, policies, and schedules. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. The ANITS AI Assistant centralizes all campus knowledge into a unified Vector Database, providing low-latency conversational access and dynamic data management across Web, Telegram, and WhatsApp.
 
 ## Key Features
 - **Omnichannel RAG AI**: Grounded conversational responses across Web, Telegram, and WhatsApp.
@@ -57,7 +57,7 @@ To ensure absolute transparency and strict maintainability, the complete system 
 <details open>
 <summary><b>1️⃣ Product & Vision</b></summary>
 
-- [1. Enterprise Documentation Overview](#1-enterprise-documentation-overview)
+- [1. system documentation Overview](#1-enterprise-documentation-overview)
 - [2. Project Overview](#2-project-overview)
 - [3. Problem Statement](#3-problem-statement)
 - [4. Objectives](#4-objectives)
@@ -126,18 +126,18 @@ To ensure absolute transparency and strict maintainability, the complete system 
 
 ---
 
-## 1. Enterprise Documentation Overview
-Welcome to the official, enterprise-grade repository for the **ANITS AI Assistant**. This document serves as the absolute source of truth for the system's architecture, machine learning pipeline, deployment procedures, and API specifications. It has been authored to strict Tier-1 engineering standards to ensure comprehensive maintainability and scalability.
+## 1. system documentation Overview
+Welcome to the official, production-ready repository for the **ANITS AI Assistant**. This document serves as the absolute source of truth for the system's architecture, machine learning pipeline, deployment procedures, and API specifications. It has been authored to strict modern software engineering practices to ensure comprehensive maintainability and scalability.
 
 ## 2. Project Overview
-The ANITS AI Assistant is a centralized, zero-latency conversational hub designed for Anil Neerukonda Institute of Technology & Sciences (ANITS). By leveraging Retrieval-Augmented Generation (RAG), it ingests unstructured college documents (PDFs) and structured student data (CSV/JSON) into a unified MongoDB Vector Database. Students and faculty can query this data natively via the Web, Telegram, and WhatsApp, drastically reducing administrative overhead and unifying campus communications.
+The ANITS AI Assistant is a centralized, low-latency conversational hub designed for Anil Neerukonda Institute of Technology & Sciences (ANITS). By leveraging Retrieval-Augmented Generation (RAG), it ingests unstructured college documents (PDFs) and structured student data (CSV/JSON) into a unified MongoDB Vector Database. Students and faculty can query this data natively via the Web, Telegram, and WhatsApp, drastically reducing administrative overhead and unifying campus communications.
 
 ## 3. Problem Statement
 Educational institutions suffer from fragmented data silos. Students struggle to find current circulars, policies, and schedules spread across legacy PHP websites and physical notice boards. Faculty spend excessive time answering repetitive administrative questions and manually managing disparate student databases. Furthermore, there is no unified, multi-platform system capable of interpreting both natural language and visual academic documents (like handwritten timetables) in real-time.
 
 ## 4. Objectives
 - **Centralize Knowledge:** Consolidate all academic and administrative data into a single, highly available Vector Database.
-- **Omnichannel Access:** Provide zero-latency conversational access across Web, Telegram, and WhatsApp without context degradation.
+- **Omnichannel Access:** Provide low-latency conversational access across Web, Telegram, and WhatsApp without context degradation.
 - **Automate Ingestion:** Enable zero-downtime, dynamic schema ingestion for massive student datasets without requiring database migrations or developer intervention.
 - **Empower Faculty:** Provide a secure, JWT-authenticated portal for broad email communications and data management.
 
@@ -155,9 +155,9 @@ Educational institutions suffer from fragmented data silos. Students struggle to
 - **Vision Pipeline**: The system MUST encode uploaded images in Base64 and append them as multi-part payloads for the multimodal vision pipeline.
 
 ## 7. Non-Functional Requirements
-- **Performance**: 95th percentile (P95) of text-based queries must resolve in < 2.5 seconds (including vector retrieval and LLM inference).
+- **Performance**: text-based queries resolve efficiently (including vector retrieval and LLM inference).
 - **Security**: Zero hardcoded secrets. Strict environment variable enforcement. PII must be encrypted at rest within MongoDB Atlas.
-- **Availability**: The API Gateway must support 99.9% uptime, utilizing stateless horizontal scaling.
+- **Availability**: The API Gateway must support highly available architecture, utilizing stateless horizontal scaling.
 - **Maintainability**: Complete separation of concerns between React presentation (frontend) and Flask orchestration (backend).
 
 ## 8. User Stories
@@ -351,7 +351,7 @@ anits-college-website/
 │   └── vite.config.js         # Build tooling and minification config
 │
 ├── data/                      # Local storage for PDFs and system configuration
-├── docs/                      # Auxiliary Enterprise documentation
+├── docs/                      # Auxiliary system documentation
 └── README.md                  # This Master Document
 ```
 
@@ -403,9 +403,9 @@ GMAIL_APP_PASSWORD=your_16_char_app_password
 
 ## 28. Performance Metrics
 - **Frontend Build**: Vite production compilation (`npm run build`) completes in < 3.0 seconds.
-- **Inference Latency**: 95th percentile (P95) RAG retrieval + LLM synthesis achieves < 2.5s response times.
+- **Inference Latency**: RAG retrieval and LLM synthesis achieve optimized response times.
 - **Vector Retrieval**: MongoDB `$vectorSearch` executes in < 150ms over a corpus of 10,000+ embedded chunks.
-- **Scalability**: The stateless JWT backend supports theoretically infinite horizontal scaling behind standard Application Load Balancers (ALB).
+- **Scalability**: The stateless JWT backend supports horizontally scalable behind standard Application Load Balancers (ALB).
 
 ## 29. Security Considerations
 - **No Hardcoded Secrets**: Strict `.env` parsing enforced via `os.getenv`.

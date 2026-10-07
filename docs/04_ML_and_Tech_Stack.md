@@ -47,7 +47,7 @@ anits-college-website/
 │   └── vite.config.js         # ESBuild tooling and minification config
 │
 ├── data/                      # Local storage for PDFs and system configuration
-├── docs/                      # Auxiliary Enterprise documentation
+├── docs/                      # Auxiliary system documentation
 └── README.md                  # The Root Master Document
 ```
 
@@ -59,4 +59,4 @@ anits-college-website/
 | **Backend Gateway** | Python 3.11 (Flask) | Chosen over Node.js (Express) or Django. Python possesses the most mature AI/ML ecosystem globally (LangChain, PyMuPDF, GenAI). Flask’s lightweight WSGI nature prevents framework bloat and allows custom, ultra-low-latency routing pipelines natively compatible with AI libraries. |
 | **Database** | MongoDB Atlas | Student datasets have wildly unpredictable schemas across different academic years. A NoSQL document store handles this natively without breaking SQL `ALTER TABLE` scripts. Furthermore, **Atlas Vector Search** eliminates the high network latency and exorbitant licensing costs of managing an external, isolated vector database (e.g., Pinecone or Milvus). |
 | **LLM Inference** | Google Gemini 1.5 Flash | Significantly outperforms competitors (like GPT-4o-mini) in multimodal vision speed. Offers a massive 1M token context window, essential for processing and grounding answers against massive PDF policy chunks concurrently without encountering context truncation. |
-| **Integrations**| Twilio & Telegram | Telegram’s native contact-sharing API prevents students from spoofing phone numbers (ensuring cryptographic identity verification). Twilio is the global enterprise standard for WhatsApp business API routing, ensuring 99.99% message delivery SLAs. |
+| **Integrations**| Twilio & Telegram | Telegram’s native contact-sharing API prevents students from spoofing phone numbers (ensuring cryptographic identity verification). Twilio is the global enterprise standard for WhatsApp business API routing, ensuring high reliability message delivery SLAs. |

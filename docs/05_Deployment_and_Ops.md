@@ -40,9 +40,9 @@ GMAIL_APP_PASSWORD=your_16_char_app_password
 
 ## 28. Performance Metrics
 - **Frontend Build**: Vite production compilation (`npm run build`) completes in < 3.0 seconds, generating ultra-optimized, tree-shaken ES modules.
-- **Inference Latency**: 95th percentile (P95) RAG retrieval + LLM synthesis achieves < 2.5s response times over HTTPS.
+- **Inference Latency**: RAG retrieval and LLM synthesis achieve optimized response times. over HTTPS.
 - **Vector Retrieval**: MongoDB `$vectorSearch` executes in < 150ms over a corpus of 10,000+ embedded chunks utilizing HNSW.
-- **Scalability**: The stateless JWT backend supports theoretically infinite horizontal scaling behind standard Application Load Balancers (ALB).
+- **Scalability**: The stateless JWT backend supports horizontally scalable behind standard Application Load Balancers (ALB).
 
 ## 29. Security Considerations
 - **No Hardcoded Secrets**: Strict `.env` parsing enforced.

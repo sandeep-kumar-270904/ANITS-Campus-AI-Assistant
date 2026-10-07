@@ -13,7 +13,7 @@ Educational institutions suffer from fragmented data silos. Students struggle to
 
 ## 4. Objectives
 - Centralize all college knowledge into a single Vector Database.
-- Provide zero-latency conversational access to students across Web, Telegram, and WhatsApp.
+- Provide low-latency conversational access to students across Web, Telegram, and WhatsApp.
 - Enable faculty to securely broadcast emails and manage dynamic student databases.
 
 ## 5. Features
@@ -30,7 +30,7 @@ Educational institutions suffer from fragmented data silos. Students struggle to
 ## 7. Non-Functional Requirements
 - **Performance**: 95% of text queries must resolve in < 2.5 seconds.
 - **Security**: No hardcoded secrets; strict HTTPS enforcement.
-- **Availability**: 99.9% uptime for the chatbot interface.
+- **Availability**: highly available architecture for the chatbot interface.
 
 ## 8. User Stories
 - *As a student*, I want to ask about my exam schedule in Hinglish so I get a natural, immediate response.

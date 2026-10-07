@@ -1,7 +1,7 @@
 # 01 - Product Requirements Document (PRD)
 
 ## 2. Project Overview
-The ANITS AI Assistant is an enterprise-scale conversational intelligence platform developed to unify fragmented academic data at the Anil Neerukonda Institute of Technology & Sciences. By adopting a Retrieval-Augmented Generation (RAG) architecture, the system dynamically vectorizes localized documents (PDF circulars, syllabuses) alongside dynamic student database records (CSVs), bypassing the need for computationally expensive static fine-tuning of foundational models. 
+The ANITS AI Assistant is an scalable conversational intelligence platform developed to unify fragmented academic data at the Anil Neerukonda Institute of Technology & Sciences. By adopting a Retrieval-Augmented Generation (RAG) architecture, the system dynamically vectorizes localized documents (PDF circulars, syllabuses) alongside dynamic student database records (CSVs), bypassing the need for computationally expensive static fine-tuning of foundational models. 
 
 ## 3. Problem Statement
 **Current State Analysis:**
@@ -11,7 +11,7 @@ The ANITS AI Assistant is an enterprise-scale conversational intelligence platfo
 - **Data Ingestion Bottlenecks**: Student datasets shift in schema every academic year (e.g., adding "Placement Status"), requiring manual SQL schema migrations and developer intervention.
 
 ## 4. Objectives
-- **Zero-Latency Orchestration**: Achieve P95 text inference < 2.5 seconds via edge-optimized caching and highly available vector search.
+- **low-latency Orchestration**: Achieve efficient text inference via edge-optimized caching and highly available vector search.
 - **Dynamic Ingestion (Schema-less)**: Support ingestion of raw, malformed CSV datasets directly from the UI without database migrations.
 - **Omnichannel Pervasiveness**: Embed the AI natively into Telegram and WhatsApp where students actively reside, establishing native cryptographic authentication flows.
 - **Faculty Empowerment**: Provide an isolated, JWT-secured portal allowing asynchronous SMTP email broadcasting to batches of >1000 students without memory overflow.
