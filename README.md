@@ -1,6 +1,6 @@
 # ANITS AI Assistant
 
-An omnichannel, RAG-powered campus intelligence platform that centralizes college data for zero-hallucination querying via Web, Telegram, and WhatsApp.
+An omnichannel, RAG-powered campus intelligence platform that centralizes college data for highly accurate querying via Web, Telegram, and WhatsApp.
 
 ## Live Demo
 - **Web App**: [anits.vercel.app](#)
@@ -21,10 +21,12 @@ The ANITS AI Assistant ingests unstructured college documents (PDFs) and structu
 - **Multimodal Vision Pipeline**: Upload photos of timetables or handwritten notices for instant AI interpretation.
 - **Hinglish & Multilingual NLP**: Natively handles regional languages and romanized scripts.
 - **Dynamic Schema Manager**: Automatically adapts database collections based on uploaded CSV headers.
-- **Zero-Trust Security**: JWT-secured portals and cryptographic Telegram phone-number verification.
+- **Fail-Secure Security**: JWT-secured portals and cryptographic Telegram phone-number verification.
 - **Faculty Broadcast Portal**: Secure rich-text Google SMTP integrations for asynchronous email broadcasting.
 
 ## Architecture
+
+### System Flow
 ```mermaid
 graph TD
     Client_Web[React Web] -->|REST| Router[Flask Gateway]
@@ -33,20 +35,66 @@ graph TD
     VectorDB -->|Context| Gemini[Gemini 1.5 LLM]
     Gemini -->|Answer| Router
 ```
-*For a deep dive into the system topology, refer to [docs/02_System_Architecture.md](docs/02_System_Architecture.md).*
+
+### Data Retrieval (RAG) Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant Flask API
+    participant MongoDB Vector
+    participant Gemini LLM
+    
+    User->>Flask API: "Explain this late fee policy" (Text + Image)
+    Flask API->>Flask API: Extract text & Encode Image to Base64
+    Flask API->>Flask API: Embed Query to 768-d Vector via text-embedding-004
+    Flask API->>MongoDB Vector: $vectorSearch (Cosine Similarity)
+    MongoDB Vector-->>Flask API: Top 4 Context Chunks (Threshold > 0.75)
+    Flask API->>Gemini LLM: Multi-part Payload (Prompt + Image Base64 + Context Chunks)
+    Gemini LLM-->>Flask API: Contextual Synthesized Answer
+    Flask API-->>User: Display Formatted Markdown
+```
+
+### Database Schema (ER Diagram)
+```mermaid
+erDiagram
+    STUDENTS ||--o{ CHAT_LOGS : initiates
+    STUDENTS {
+        string RollNumber PK
+        string Name
+        string Email
+        string Phone
+        float CGPA
+        string Attendance
+    }
+    CHAT_LOGS {
+        string session_id PK
+        string user_message
+        string bot_reply
+        string platform
+        date timestamp
+    }
+    KNOWLEDGE_BASE {
+        string source PK
+        string text
+        float[] embedding
+        date updated_at
+    }
+```
+*Note: The `STUDENTS` collection utilizes a dynamic BSON schema, meaning fields like `CGPA` and `Attendance` can be dynamically injected via the Admin Schema Manager without rigid migrations.*
 
 ## Tech Stack
-- **Frontend**: React 19, Vite, Tailwind CSS
-- **Backend**: Python 3.11, Flask
-- **Database**: MongoDB Atlas (Vector Search & BSON Document Store)
-- **AI/ML**: Google Gemini 1.5 Flash, PyMuPDF, text-embedding-004
-- **Realtime**: Twilio (WhatsApp), python-telegram-bot
+| Layer | Technology | Engineering Justification |
+|-------|------------|---------------------------|
+| **Frontend** | React 19 + Vite | Vite provides sub-second HMR. React's virtual DOM is crucial for maintaining the complex state of the Admin Dashboard without expensive repaints. |
+| **Backend** | Python 3.11 (Flask) | Chosen over Node.js. Python possesses the most mature AI/ML ecosystem (LangChain, PyMuPDF). Flask’s lightweight WSGI nature allows custom, low-latency LLM routing. |
+| **Database** | MongoDB Atlas | Student datasets have unpredictable schemas across different academic years. A NoSQL document store handles this natively without migration scripts. **Atlas Vector Search** eliminates the network latency and cost of an external vector database (e.g., Pinecone). |
+| **LLM Inference** | Google Gemini 1.5 Flash | Outperforms competitors in multimodal vision speed. Offers a massive 1M token context window, essential for processing massive PDF policy chunks concurrently. |
+| **Integrations**| Twilio & Telegram | Telegram’s native API prevents students from spoofing phone numbers (ensuring cryptographic identity verification). Twilio routes the WhatsApp API. |
 
 ## Engineering Decisions
-- **MongoDB over SQL**: Student datasets have unpredictable schemas across different academic years. A NoSQL document store handles this natively without migration scripts, while **Atlas Vector Search** eliminates the need for an external vector database (e.g., Pinecone).
 - **RAG over Fine-Tuning**: Prevents catastrophic forgetting and eliminates hallucinations by strictly bounding the LLM to local, verified context chunks.
-- **Flask over Node.js**: Python possesses the most mature AI/ML ecosystem (LangChain, PyMuPDF, GenAI), making integration with text-embedding models seamless.
-- **Cryptographic Telegram Auth**: Enforces hardware-level phone number validation to prevent students from spoofing identities when requesting sensitive PII like grades.
+- **Fail-Secure Architecture**: Implemented rigorous environment variable checks. If `JWT_SECRET` or `ADMIN_PASSWORD` fallbacks are detected, the app explicitly throws a `RuntimeError` on startup rather than defaulting to unsafe values.
+- **Dynamic BSON Ingestion**: Built a CSV parser that iterates over dynamically uploaded headers, bypassing the need for developer intervention or SQL migrations for every new academic year.
 
 ## Setup
 ```bash
@@ -92,7 +140,30 @@ GMAIL_APP_PASSWORD=your_16_char_app_password
 ## Security
 - **Strict CORS Policy**: API endpoints dynamically restrict origins via the `FRONTEND_URL` environment variable.
 - **Stateless JWTs**: Admin portals are secured with stateless JSON Web Tokens signed via `HS256`, expiring in 24 hours to mitigate session hijacking.
-- **Fail-Secure Secrets**: If deployment pipelines fail to inject environment variables (like `JWT_SECRET`), the application throws a `RuntimeError` and refuses to boot, preventing fallback exposure.
+- **Cryptographic PII Masking**: Telegram bots natively request secure phone numbers to validate user identities before fetching private MongoDB collections.
+
+### Authentication Flow
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Flask Gateway
+    
+    Client->>Flask Gateway: POST /api/login (Credentials)
+    Flask Gateway->>Flask Gateway: Validate against ALLOWED_EMAILS & Hash
+    alt Valid Credentials
+        Flask Gateway->>Client: 200 OK + JWT (Signed with HS256)
+    else Invalid Credentials
+        Flask Gateway->>Client: 401 Unauthorized
+    end
+    
+    Client->>Flask Gateway: Protected Request (Header: Bearer JWT)
+    Flask Gateway->>Flask Gateway: Decode JWT & Validate Expiration
+    alt Valid Token
+        Flask Gateway->>Client: 200 OK (Protected Resource Served)
+    else Expired Token
+        Flask Gateway->>Client: 401 Unauthorized (Token Expired)
+    end
+```
 
 ## Limitations
 - WhatsApp integration currently relies on developer-mode Twilio accounts. A verified WhatsApp Business Account (WABA) is required for unrestrained production scale and template messaging.
