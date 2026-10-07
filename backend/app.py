@@ -1439,10 +1439,16 @@ MAX_MESSAGE_LENGTH = 10000
 
 
 # Mock Student Database for SSO features
-STUDENT_DB = {
-    "319126510001": {"name": "Sandeep Kumar", "attendance": "85%", "marks": "9.2 CGPA", "next_exam": "Machine Learning - 12th Nov"},
-    "319126510002": {"name": "John Doe", "attendance": "72%", "marks": "8.1 CGPA", "next_exam": "Computer Networks - 14th Nov"}
-}
+def load_student_db():
+    try:
+        with open("../data/demo_students.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            data.pop("_comment", None)
+            return data
+    except Exception:
+        return {}
+
+STUDENT_DB = load_student_db()
 
 query_cache = {}
 

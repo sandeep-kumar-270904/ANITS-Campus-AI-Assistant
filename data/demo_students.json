@@ -1,0 +1,17 @@
+{
+  "_comment": "All student records included in this repository are synthetic demo data. Do not use real student PII.",
+  "DEMO001": {
+    "name": "Demo Student",
+    "attendance": "91%",
+    "marks": "8.7 CGPA",
+    "next_exam": "Machine Learning - 12th Nov",
+    "phone": "+1234567890"
+  },
+  "DEMO002": {
+    "name": "Jane Doe",
+    "attendance": "85%",
+    "marks": "9.0 CGPA",
+    "next_exam": "Computer Networks - 14th Nov",
+    "phone": "+0987654321"
+  }
+}
