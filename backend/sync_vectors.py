@@ -8,7 +8,7 @@ load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = pymongo.MongoClient(MONGO_URI)
-db = client['anits_db']
+db = client['college_data']
 collection = db['knowledge_base']
 
 print("Initializing embedding model...")
@@ -28,7 +28,7 @@ texts_to_embed = []
 metadata_list = []
 
 # Process FAQs
-faq_data = load_json("../data/faq.json")
+faq_data = load_json("../data/faqs.json")
 for item in faq_data:
     q = item.get('question', '')
     a = item.get('answer', '')
