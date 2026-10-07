@@ -1,0 +1,25 @@
+# ==============================================================================
+# ANITS AI Assistant - Global Crawler Policy
+# ==============================================================================
+# This file restricts search engine crawlers from indexing sensitive academic 
+# portals and internal dashboards.
+# ==============================================================================
+
+User-agent: *
+# Block all automated scraping of sensitive administrative routes
+Disallow: /admin/
+Disallow: /faculty/
+Disallow: /login/
+Disallow: /dashboard/
+
+# Block crawlers from interacting with or testing the chat API endpoints
+Disallow: /chat/
+Disallow: /api/
+
+# Allow standard indexing of the public landing page
+Allow: /$
+Allow: /index.html
+Allow: /assets/
+
+# Rate limiting to prevent aggressive bot scraping (helps prevent DDoS)
+Crawl-delay: 10
