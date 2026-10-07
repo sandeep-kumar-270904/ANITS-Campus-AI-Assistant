@@ -79,9 +79,11 @@ if GEMINI_API_KEY:
 app = Flask(__name__)
 app.secret_key = JWT_SECRET
 
+# Restrict CORS to explicit domains to prevent cross-origin attacks
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 CORS(app, resources={
-    r"/chat": {"origins": "*", "methods": ["POST"], "allow_headers": ["Content-Type"]},
-    r"/api/*": {"origins": "*"}
+    r"/chat": {"origins": [frontend_url], "methods": ["POST"], "allow_headers": ["Content-Type", "Authorization"]},
+    r"/api/*": {"origins": [frontend_url], "allow_headers": ["Content-Type", "Authorization"]}
 })
 
 # SQLite Database for Chat Logging
