@@ -49,9 +49,19 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-admin-key-for-anits")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "anits123")
-ALLOWED_ADMIN_EMAILS = ["trailmail123456@gmail.com", "xiaomiindia75@gmail.com"]
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is required")
+
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD is required")
+
+allowed_emails_str = os.getenv("ALLOWED_ADMIN_EMAILS")
+if not allowed_emails_str:
+    raise RuntimeError("ALLOWED_ADMIN_EMAILS is required")
+ALLOWED_ADMIN_EMAILS = [e.strip() for e in allowed_emails_str.split(",")]
 
 GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
@@ -67,7 +77,7 @@ if GEMINI_API_KEY:
 
 # Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv("JWT_SECRET", "super-secret-admin-key-for-anits")
+app.secret_key = JWT_SECRET
 
 CORS(app, resources={
     r"/chat": {"origins": "*", "methods": ["POST"], "allow_headers": ["Content-Type"]},
