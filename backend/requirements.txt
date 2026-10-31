@@ -12,6 +12,9 @@ google-genai
 Flask-SQLAlchemy
 scikit-learn
 gunicorn
+requests
+beautifulsoup4
+certifi
 
 fastembed
 twilio
@@ -20,3 +23,6 @@ pandas
 openpyxl
 python-docx
 resend
+
+pytest
+pytest-flask

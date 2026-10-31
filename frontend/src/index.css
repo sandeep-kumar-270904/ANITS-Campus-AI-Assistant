@@ -354,7 +354,7 @@ a:hover {
   align-items: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(0, 77, 153, 0.9), rgba(0, 51, 102, 0.95)), url('/campus-bg.jpg') center/cover;
+  background: linear-gradient(135deg, rgba(0, 77, 153, 0.9), rgba(0, 51, 102, 0.95)), url('/images/anits2.png') center/cover;
   color: white;
   padding-top: 80px;
 }

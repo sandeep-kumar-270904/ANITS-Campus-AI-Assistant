@@ -165,8 +165,28 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'}/export`;
+  const handleExportCSV = async () => {
+    const token = localStorage.getItem('adminToken');
+    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+    try {
+      const response = await fetch(`${API_URL}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chat_logs.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        alert('Failed to export CSV. Make sure you are logged in.');
+      }
+    } catch (err) {
+      console.error('Failed to download CSV', err);
+    }
   };
 
   const handleExportPDF = async () => {

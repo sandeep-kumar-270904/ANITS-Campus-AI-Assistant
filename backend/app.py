@@ -11,7 +11,12 @@ try:
 except ImportError:
     import pymupdf as fitz
 import json
-from flask import Flask, request, jsonify, render_template_string, Response, session
+import sys
+import subprocess
+import base64
+import re
+import traceback
+from flask import Flask, request, jsonify, render_template_string, Response, session, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
 from langdetect import detect
@@ -28,7 +33,10 @@ import jwt
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
-import resend
+try:
+    import resend
+except ImportError:
+    resend = None
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -41,8 +49,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-# Load API keys from .env
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data"))
+
+# Load API keys from .env (checks backend/.env, project root .env, and cwd)
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, "..", ".env"))
 load_dotenv()
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -67,7 +81,7 @@ GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-if RESEND_API_KEY:
+if RESEND_API_KEY and resend:
     resend.api_key = RESEND_API_KEY
 
 # Initialize LLMs
@@ -82,8 +96,11 @@ app.secret_key = JWT_SECRET
 # Restrict CORS to explicit domains to prevent cross-origin attacks
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 CORS(app, resources={
-    r"/chat": {"origins": [frontend_url], "methods": ["POST"], "allow_headers": ["Content-Type", "Authorization"]},
-    r"/api/*": {"origins": [frontend_url], "allow_headers": ["Content-Type", "Authorization"]}
+    r"/chat": {"origins": [frontend_url], "methods": ["POST", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]},
+    r"/api/*": {"origins": [frontend_url], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]},
+    r"/analytics": {"origins": [frontend_url], "methods": ["GET", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]},
+    r"/export": {"origins": [frontend_url], "methods": ["GET", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]},
+    r"/health": {"origins": [frontend_url], "methods": ["GET", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}
 })
 
 # SQLite Database for Chat Logging
@@ -123,6 +140,7 @@ chat_logs = None
 enquiries_collection = None
 telegram_users_collection = None
 student_records_collection = None
+faculty_users_collection = None
 
 try:
     import certifi
@@ -146,7 +164,7 @@ except Exception as e:
     print("App will run without database logging.")
 
 # Enquiries Data Handling (Local JSON Fallback)
-enquiries_file_path = "../data/enquiries.json"
+enquiries_file_path = os.path.join(DATA_DIR, "enquiries.json")
 
 embedding_model = None
 def get_embedding_model():
@@ -174,7 +192,7 @@ def save_enquiries(data):
         json.dump(data, f, indent=4)
 
 # Syllabus Data Handling (Local JSON Fallback for reliability)
-syllabus_file_path = "../data/syllabus.json"
+syllabus_file_path = os.path.join(DATA_DIR, "syllabus.json")
 def load_syllabus():
     if os.path.exists(syllabus_file_path):
         with open(syllabus_file_path, "r", encoding="utf-8") as f:
@@ -187,7 +205,7 @@ def save_syllabus(data):
         json.dump(data, f, indent=4)
 
 # Academic Calendar Data Handling
-calendar_file_path = "../data/academic_calendar.json"
+calendar_file_path = os.path.join(DATA_DIR, "academic_calendar.json")
 def load_academic_calendar():
     if os.path.exists(calendar_file_path):
         with open(calendar_file_path, "r", encoding="utf-8") as f:
@@ -200,7 +218,7 @@ def save_academic_calendar(data):
         json.dump(data, f, indent=4)
 
 # Time Tables Data Handling
-time_tables_file_path = "../data/time_tables.json"
+time_tables_file_path = os.path.join(DATA_DIR, "time_tables.json")
 def load_time_tables():
     if os.path.exists(time_tables_file_path):
         with open(time_tables_file_path, "r", encoding="utf-8") as f:
@@ -213,7 +231,7 @@ def save_time_tables(data):
         json.dump(data, f, indent=4)
 
 # Events Data Handling
-events_file_path = "../data/events.json"
+events_file_path = os.path.join(DATA_DIR, "events.json")
 def load_events():
     if os.path.exists(events_file_path):
         with open(events_file_path, "r", encoding="utf-8") as f:
@@ -226,7 +244,7 @@ def save_events(data):
         json.dump(data, f, indent=4)
 
 # Faculty Data Handling
-faculty_file_path = "../data/faculty.json"
+faculty_file_path = os.path.join(DATA_DIR, "faculty.json")
 def load_faculty():
     if os.path.exists(faculty_file_path):
         with open(faculty_file_path, "r", encoding="utf-8") as f:
@@ -239,7 +257,7 @@ def save_faculty(data):
         json.dump(data, f, indent=4)
 
 # Placements Data Handling
-placements_file_path = "../data/placements.json"
+placements_file_path = os.path.join(DATA_DIR, "placements.json")
 def load_placements():
     if os.path.exists(placements_file_path):
         with open(placements_file_path, "r", encoding="utf-8") as f:
@@ -252,7 +270,7 @@ def save_placements(data):
         json.dump(data, f, indent=4)
 
 # Research Data Handling
-research_file_path = "../data/research.json"
+research_file_path = os.path.join(DATA_DIR, "research.json")
 def load_research():
     if os.path.exists(research_file_path):
         with open(research_file_path, "r", encoding="utf-8") as f:
@@ -265,7 +283,7 @@ def save_research(data):
         json.dump(data, f, indent=4)
 
 # Gallery Data Handling
-gallery_file_path = "../data/gallery.json"
+gallery_file_path = os.path.join(DATA_DIR, "gallery.json")
 def load_gallery():
     if os.path.exists(gallery_file_path):
         with open(gallery_file_path, "r", encoding="utf-8") as f:
@@ -278,7 +296,7 @@ def save_gallery(data):
         json.dump(data, f, indent=4)
 
 # Blogs Data Handling
-blogs_file_path = "../data/blogs.json"
+blogs_file_path = os.path.join(DATA_DIR, "blogs.json")
 def load_blogs():
     if os.path.exists(blogs_file_path):
         with open(blogs_file_path, "r", encoding="utf-8") as f:
@@ -291,7 +309,7 @@ def save_blogs(data):
         json.dump(data, f, indent=4)
 
 # Jobs Data Handling
-jobs_file_path = "../data/jobs.json"
+jobs_file_path = os.path.join(DATA_DIR, "jobs.json")
 def load_jobs():
     if os.path.exists(jobs_file_path):
         with open(jobs_file_path, "r", encoding="utf-8") as f:
@@ -304,7 +322,7 @@ def save_jobs(data):
         json.dump(data, f, indent=4)
 
 # Alumni Data Handling
-alumni_file_path = "../data/alumni.json"
+alumni_file_path = os.path.join(DATA_DIR, "alumni.json")
 def load_alumni():
     if os.path.exists(alumni_file_path):
         with open(alumni_file_path, "r", encoding="utf-8") as f:
@@ -358,13 +376,13 @@ def extract_website_data():
 @lru_cache(maxsize=1)
 def extract_image_data():
     if not gemini_client: return ""
-    file_path = "../data/image_context.txt"
+    file_path = os.path.join(DATA_DIR, "image_context.txt")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
             
     data = ""
-    img_dirs = ["../data/gallery", "../data/blogs"]
+    img_dirs = [os.path.join(DATA_DIR, "gallery"), os.path.join(DATA_DIR, "blogs")]
     for img_dir in img_dirs:
         if not os.path.isdir(img_dir):
             continue
@@ -386,7 +404,7 @@ def extract_image_data():
                     print(f"Error processing image {file}: {e}")
                     
     # Save to file
-    os.makedirs("../data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(data)
     return data
@@ -429,14 +447,14 @@ def perform_deep_scrape_anits_org():
             print(f"Error scraping {url}: {e}")
             
     # Save to file
-    os.makedirs("../data", exist_ok=True)
-    with open("../data/scraped_anits_org.txt", "w", encoding="utf-8") as f:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(os.path.join(DATA_DIR, "scraped_anits_org.txt"), "w", encoding="utf-8") as f:
         f.write(data)
     return data
 
 @lru_cache(maxsize=1)
 def extract_official_website_data():
-    file_path = "../data/scraped_anits_org.txt"
+    file_path = os.path.join(DATA_DIR, "scraped_anits_org.txt")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
@@ -445,7 +463,7 @@ def extract_official_website_data():
 
 # Load FAQs
 faq_data = []
-faq_path = "../data/faqs.json"
+faq_path = os.path.join(DATA_DIR, "faqs.json")
 if os.path.exists(faq_path):
     with open(faq_path, "r", encoding="utf-8") as f:
         faq_data = json.load(f)
@@ -479,13 +497,15 @@ def token_required(f):
         if request.method == "OPTIONS":
             return jsonify({}), 200
             
-        token = request.headers.get("Authorization")
+        token = request.headers.get("Authorization") or request.args.get("token")
         if not token:
             return jsonify({"error": "Token is missing"}), 401
         try:
             # Bearer <token>
             token = token.split(" ")[1] if " " in token else token
-            jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            if decoded.get("role") == "faculty":
+                return jsonify({"error": "Unauthorized. Admin privileges required."}), 403
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Session expired. Please log in again."}), 401
         except Exception as e:
@@ -500,13 +520,13 @@ def faculty_token_required(f):
         if request.method == "OPTIONS":
             return jsonify({}), 200
             
-        token = request.headers.get("Authorization")
+        token = request.headers.get("Authorization") or request.args.get("token")
         if not token:
             return jsonify({"error": "Token is missing"}), 401
         try:
             token = token.split(" ")[1] if " " in token else token
             decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            if decoded.get("role") != "faculty":
+            if decoded.get("role") not in ["faculty", "admin"]:
                 return jsonify({"error": "Unauthorized. Faculty access required."}), 403
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Session expired. Please log in again."}), 401
@@ -613,8 +633,9 @@ def faculty_email_broadcast():
             
         if not student_emails:
             # Fallback to the sender's email for testing if no students match
-            auth_header = request.headers.get("Authorization").split(" ")[1]
-            decoded = jwt.decode(auth_header, JWT_SECRET, algorithms=["HS256"])
+            auth_header = request.headers.get("Authorization", "")
+            token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             student_emails = [decoded.get("user")]
             
         success_count = 0
@@ -736,9 +757,16 @@ def login():
     if email not in ALLOWED_ADMIN_EMAILS:
         return jsonify({"error": "Unauthorized email address"}), 403
         
-    if password == ADMIN_PASSWORD:
+    is_valid_pwd = (password == ADMIN_PASSWORD)
+    if not is_valid_pwd and ADMIN_PASSWORD:
+        try:
+            is_valid_pwd = check_password_hash(ADMIN_PASSWORD, password)
+        except Exception:
+            pass
+
+    if is_valid_pwd:
         token = jwt.encode(
-            {"user": email, "exp": datetime.utcnow().timestamp() + 3600*24*30}, # 30 days expire
+            {"user": email, "role": "admin", "exp": datetime.utcnow().timestamp() + 3600*24*30}, # 30 days expire
             JWT_SECRET,
             algorithm="HS256"
         )
@@ -757,7 +785,7 @@ def upload_circular():
     
     if file and file.filename.endswith(".pdf"):
         filename = secure_filename(file.filename)
-        pdf_dir = "../data/circulars"
+        pdf_dir = os.path.join(DATA_DIR, "circulars")
         os.makedirs(pdf_dir, exist_ok=True)
         file.save(os.path.join(pdf_dir, filename))
         # Clear cache so chatbot learns new circular immediately
@@ -786,7 +814,7 @@ def upload_syllabus():
         unique_id = str(uuid.uuid4())[:8]
         filename = f"syllabus_{unique_id}_{secure_filename(file.filename)}"
         
-        pdf_dir = "../data/syllabus_files"
+        pdf_dir = os.path.join(DATA_DIR, "syllabus_files")
         os.makedirs(pdf_dir, exist_ok=True)
         file.save(os.path.join(pdf_dir, filename))
         
@@ -813,7 +841,7 @@ def get_syllabus():
 
 @app.route("/api/syllabus_file/<filename>")
 def serve_syllabus_file(filename):
-    pdf_dir = "../data/syllabus_files"
+    pdf_dir = os.path.join(DATA_DIR, "syllabus_files")
     return send_from_directory(pdf_dir, filename)
 
 @app.route("/api/upload_policy", methods=["POST"])
@@ -835,7 +863,7 @@ def upload_policy():
         formatted_name = policy_name.lower().replace(" ", "-").replace("/", "-")
         filename = f"{formatted_name}.pdf"
         
-        pdf_dir = "../data/policies"
+        pdf_dir = os.path.join(DATA_DIR, "policies")
         os.makedirs(pdf_dir, exist_ok=True)
         file.save(os.path.join(pdf_dir, filename))
         
@@ -845,7 +873,7 @@ def upload_policy():
 
 @app.route("/api/policy_file/<filename>")
 def serve_policy_file(filename):
-    pdf_dir = "../data/policies"
+    pdf_dir = os.path.join(DATA_DIR, "policies")
     return send_from_directory(pdf_dir, filename)
 
 @app.route("/api/upload_academic_calendar", methods=["POST"])
@@ -868,7 +896,7 @@ def upload_academic_calendar():
         unique_id = str(uuid.uuid4())[:8]
         filename = f"calendar_{unique_id}_{secure_filename(file.filename)}"
         
-        pdf_dir = "../data/academic_calendar_files"
+        pdf_dir = os.path.join(DATA_DIR, "academic_calendar_files")
         os.makedirs(pdf_dir, exist_ok=True)
         file.save(os.path.join(pdf_dir, filename))
         
@@ -908,7 +936,7 @@ def get_academic_calendar():
 
 @app.route("/api/academic_calendar_file/<filename>")
 def serve_academic_calendar_file(filename):
-    pdf_dir = "../data/academic_calendar_files"
+    pdf_dir = os.path.join(DATA_DIR, "academic_calendar_files")
     return send_from_directory(pdf_dir, filename)
 
 @app.route("/api/upload_time_table", methods=["POST"])
@@ -929,7 +957,7 @@ def upload_time_table():
         unique_id = str(uuid.uuid4())[:8]
         filename = f"timetable_{unique_id}_{secure_filename(file.filename)}"
         
-        pdf_dir = "../data/time_table_files"
+        pdf_dir = os.path.join(DATA_DIR, "time_table_files")
         os.makedirs(pdf_dir, exist_ok=True)
         file.save(os.path.join(pdf_dir, filename))
         
@@ -961,7 +989,7 @@ def get_time_tables():
 
 @app.route("/api/time_table_file/<filename>")
 def serve_time_table_file(filename):
-    pdf_dir = "../data/time_table_files"
+    pdf_dir = os.path.join(DATA_DIR, "time_table_files")
     return send_from_directory(pdf_dir, filename)
 
 @app.route("/api/events", methods=["GET"])
@@ -1164,7 +1192,7 @@ def upload_gallery():
         unique_id = str(uuid.uuid4())[:8]
         filename = f"gallery_{unique_id}_{secure_filename(file.filename)}"
         
-        gallery_dir = "../data/gallery_files"
+        gallery_dir = os.path.join(DATA_DIR, "gallery_files")
         os.makedirs(gallery_dir, exist_ok=True)
         file.save(os.path.join(gallery_dir, filename))
         
@@ -1190,7 +1218,7 @@ def get_gallery():
 
 @app.route("/api/gallery_file/<filename>")
 def serve_gallery_file(filename):
-    gallery_dir = "../data/gallery_files"
+    gallery_dir = os.path.join(DATA_DIR, "gallery_files")
     return send_from_directory(gallery_dir, filename)
 
 @app.route("/api/gallery/<gallery_id>", methods=["DELETE"])
@@ -1224,7 +1252,7 @@ def upload_blog():
         if ext in allowed_extensions:
             unique_id = str(uuid.uuid4())[:8]
             filename = f"blog_{unique_id}_{secure_filename(file.filename)}"
-            blog_img_dir = "../data/blog_images"
+            blog_img_dir = os.path.join(DATA_DIR, "blog_images")
             os.makedirs(blog_img_dir, exist_ok=True)
             file.save(os.path.join(blog_img_dir, filename))
     
@@ -1249,7 +1277,7 @@ def get_blogs():
 
 @app.route("/api/blog_image/<filename>")
 def serve_blog_image(filename):
-    blog_img_dir = "../data/blog_images"
+    blog_img_dir = os.path.join(DATA_DIR, "blog_images")
     return send_from_directory(blog_img_dir, filename)
 
 @app.route("/api/blogs/<blog_id>", methods=["DELETE"])
@@ -1400,7 +1428,6 @@ def get_enquiries():
             
     # Fallback to JSON
     data = load_enquiries()
-    data = list(db.logs.find({}, {"_id": 0}))
     data.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
     return jsonify(data)
 
@@ -1443,7 +1470,7 @@ MAX_MESSAGE_LENGTH = 10000
 # Mock Student Database for SSO features
 def load_student_db():
     try:
-        with open("../data/demo_students.json", "r", encoding="utf-8") as f:
+        with open(os.path.join(DATA_DIR, "demo_students.json"), "r", encoding="utf-8") as f:
             data = json.load(f)
             data.pop("_comment", None)
             return data
@@ -1630,6 +1657,20 @@ def answer_query(user_message, session_id="default", audio_payload=None, image_p
             normalized_query = user_message.lower().strip()
             query_cache[normalized_query] = bot_reply
             
+        # Log to SQLite
+        try:
+            new_log = ChatLog(
+                user_message=user_message or "[Voice/Image]",
+                bot_reply=bot_reply,
+                detected_language=lang_code,
+                timestamp=datetime.utcnow()
+            )
+            sql_db.session.add(new_log)
+            sql_db.session.commit()
+        except Exception as e:
+            sql_db.session.rollback()
+            print("SQLite Log error:", e)
+
         # Log to MongoDB
         try:
             if db is not None:
@@ -1771,8 +1812,9 @@ def upload_file():
         return jsonify({"error": "No selected file"}), 400
     if file and file.filename.endswith('.pdf'):
         filename = secure_filename(file.filename)
-        os.makedirs("data", exist_ok=True)
-        file_path = os.path.join("data", filename)
+        circulars_dir = os.path.join(DATA_DIR, "circulars")
+        os.makedirs(circulars_dir, exist_ok=True)
+        file_path = os.path.join(circulars_dir, filename)
         file.save(file_path)
         return jsonify({"message": f"File {filename} uploaded successfully. Remember to trigger sync!"}), 200
     return jsonify({"error": "Only PDF files are allowed"}), 400
@@ -1783,8 +1825,8 @@ def sync_data():
     try:
         def run_sync():
             try:
-                import sys
-                subprocess.run([sys.executable, "sync_vectors.py"], check=True)
+                sync_script = os.path.join(BASE_DIR, "sync_vectors.py")
+                subprocess.run([sys.executable, sync_script], check=True, cwd=BASE_DIR)
                 print("Vector DB Sync completed successfully.")
             except Exception as e:
                 print(f"Error during vector sync: {e}")
@@ -1984,6 +2026,8 @@ def upload_student_data():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
     
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
     filename = file.filename.lower()
     students_collection = db["students"]
     inserted_count = 0
@@ -2046,6 +2090,8 @@ def upload_student_data():
 @token_required
 def get_student_fields():
     try:
+        if db is None:
+            return jsonify({"error": "Database not connected"}), 503
         students_collection = db["students"]
         docs = students_collection.find().limit(500)
         keys = set()

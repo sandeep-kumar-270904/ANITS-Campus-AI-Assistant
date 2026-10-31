@@ -4,12 +4,25 @@ import pymongo
 from fastembed import TextEmbedding
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data"))
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, "..", ".env"))
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-client = pymongo.MongoClient(MONGO_URI)
-db = client['college_data']
-collection = db['knowledge_base']
+
+try:
+    import certifi
+    client = pymongo.MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
+    client.admin.command('ping')
+    db = client['college_data']
+    collection = db['knowledge_base']
+    print("Successfully connected to MongoDB Atlas.")
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    print("Please verify MONGO_URI in your .env file.")
+    exit(1)
 
 print("Initializing embedding model...")
 model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
@@ -28,7 +41,7 @@ texts_to_embed = []
 metadata_list = []
 
 # Process FAQs
-faq_data = load_json("../data/faqs.json")
+faq_data = load_json(os.path.join(DATA_DIR, "faqs.json"))
 for item in faq_data:
     q = item.get('question', '')
     a = item.get('answer', '')
@@ -37,35 +50,35 @@ for item in faq_data:
     metadata_list.append({"type": "faq", "text": text})
 
 # Process Faculty
-faculty_data = load_json("../data/faculty.json")
+faculty_data = load_json(os.path.join(DATA_DIR, "faculty.json"))
 for item in faculty_data:
     text = f"Faculty Member: {item.get('name')} in Department: {item.get('department')}. Title: {item.get('title')}. Email: {item.get('email')}"
     texts_to_embed.append(text)
     metadata_list.append({"type": "faculty", "text": text})
 
 # Process Events
-events_data = load_json("../data/events.json")
+events_data = load_json(os.path.join(DATA_DIR, "events.json"))
 for item in events_data:
     text = f"Event: {item.get('title')} on {item.get('date')}. Description: {item.get('description')}"
     texts_to_embed.append(text)
     metadata_list.append({"type": "event", "text": text})
 
 # Process Placements
-placements_data = load_json("../data/placements.json")
+placements_data = load_json(os.path.join(DATA_DIR, "placements.json"))
 for item in placements_data:
     text = f"Placement Record: {item.get('company_name')}. Year: {item.get('year')}. Highest Package: {item.get('highest_package')}. Total Offers: {item.get('total_offers')}"
     texts_to_embed.append(text)
     metadata_list.append({"type": "placement", "text": text})
 
 # Process Syllabus
-syllabus_data = load_json("../data/syllabus.json")
+syllabus_data = load_json(os.path.join(DATA_DIR, "syllabus.json"))
 for item in syllabus_data:
     text = f"Syllabus: {item.get('department')} Year {item.get('year')}. Subjects: {item.get('subjects')}. Description: {item.get('description')}"
     texts_to_embed.append(text)
     metadata_list.append({"type": "syllabus", "text": text})
 
 # Process Academic Calendar
-calendar_data = load_json("../data/academic_calendar.json")
+calendar_data = load_json(os.path.join(DATA_DIR, "academic_calendar.json"))
 for item in calendar_data:
     text = f"Academic Calendar: {item.get('event')} on {item.get('date')}. Department: {item.get('department')}"
     texts_to_embed.append(text)
@@ -74,14 +87,14 @@ for item in calendar_data:
 if texts_to_embed:
     print(f"Generating embeddings for {len(texts_to_embed)} documents...")
     embeddings = list(model.embed(texts_to_embed))
-    
+
     print("Inserting into MongoDB...")
     for i, emb in enumerate(embeddings):
         # Convert numpy array to list for MongoDB
         doc = metadata_list[i]
         doc['embedding'] = emb.tolist()
         docs_to_insert.append(doc)
-        
+
     if docs_to_insert:
         collection.insert_many(docs_to_insert)
     print("Successfully synced all data to MongoDB Vector Database!")
